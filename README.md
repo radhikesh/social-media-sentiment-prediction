@@ -1,4 +1,4 @@
-# Predicting Sentiment of Title and Sentiment of Headline
+# Social Media Sentiment Prediction
 
 -------
   
@@ -18,7 +18,7 @@
 - Sentiment analysis of yelp review data on [kaggle][]
 - UC Business [Analytics][] 
 <!-- external links -->
-  [NLP.]:https://www.kaggle.com/rtatman/tutorial-sentiment-analysis-in-r/notebook
-  [kaggle][]:https://www.kaggle.com/suzanaiacob/sentiment-analysis-of-the-yelp-reviews-data
-  [Analytics][]:http://uc-r.github.io/gbm_regression#h2o
+[NLP.]:https://www.kaggle.com/rtatman/tutorial-sentiment-analysis-in-r/notebook
+[kaggle]:https://www.kaggle.com/suzanaiacob/sentiment-analysis-of-the-yelp-reviews-data
+[Analytics]:http://uc-r.github.io/gbm_regression#h2o
 
