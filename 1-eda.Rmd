@@ -1,0 +1,211 @@
+---
+title: "ZS data challenge"
+output: html_notebook
+---
+
+```{r}
+#loading libraries:
+library(plyr)
+library(tidyverse)
+library(caret)
+library(h2o)
+h2o.init()
+library(lubridate)
+library(data.table)
+library(gridExtra)
+install.packages("TeachingDemos")
+library(TeachingDemos)
+```
+
+
+```{r}
+dataset <- read_csv(file = "dataset/train_file.csv")
+str(dataset)
+
+testfinal <- read_csv(file = "dataset/test_file.csv")
+```
+
+
+# EDA:
+
+#### missing values:
+```{r}
+NAcol <- which(colSums(is.na(dataset)) > 0)
+sort(colSums(sapply(dataset[NAcol], is.na)), decreasing = TRUE)
+
+NAcol <- which(colSums(is.na(testfinal)) > 0)
+sort(colSums(sapply(testfinal[NAcol], is.na)), decreasing = TRUE)
+```
+
+#### SOURCE:
+```{r}
+str(dataset$Source)
+dataset$Source <- as.factor(dataset$Source)
+sourcefeq <- as.data.frame(table(dataset$Source)) %>% arrange(-Freq)
+
+testfinal$Source <- as.factor(testfinal$Source)
+```
+
+#### TOPIC:
+```{r}
+str(dataset$Topic)
+dataset$Topic <- as.factor(dataset$Topic)
+ggplot(data=dataset,aes(x=Topic)) + geom_histogram(stat = "count",fill="lightblue")
+```
+
+#### DATE:
+```{r}
+str(dataset$PublishDate)
+```
+
+```{r}
+dataset$date <- lubridate::date(dataset$PublishDate)
+dataset$time <- data.table::as.ITime(dataset$PublishDate)
+range(dataset$date,na.rm = T)
+
+dataset$date <- lubridate::date(dataset$PublishDate)
+dataset$time <- data.table::as.ITime(dataset$PublishDate)
+range(dataset$date,na.rm = T)
+```
+
+```{r}
+str(dataset$time)
+range(dataset$time,na.rm = T)
+```
+
+#### FB, Google, Linkedin
+```{r}
+range(dataset$Facebook,na.rm = T)
+length(unique(dataset$Facebook))
+
+ggplot(data = dataset,mapping = aes(x=Facebook)) + geom_histogram(fill="lightblue",bins = 50) 
+```
+
+```{r}
+range(dataset$GooglePlus)
+ggplot(data = dataset,mapping = aes(x=GooglePlus)) + geom_histogram(fill="lightblue",bins = 50) 
+```
+
+```{r}
+range(dataset$LinkedIn)
+ggplot(data = dataset,mapping = aes(x=LinkedIn)) + geom_histogram(fill="lightblue",bins = 50) 
+```
+
+#### relationship between SentimentTitle and social media platform by topic
+```{r}
+nC <- c("Facebook","GooglePlus", "LinkedIn")
+y <- "SentimentTitle"
+plotlist <- list()
+n=0
+for (j in nC)
+  local({ 
+        j <- j
+        n <- length(plotlist)+1
+        xx <- j
+        yy <- y 
+        xl <- j
+        yl <- y
+        temp <- dataset[,c(xx,yy,"Topic")]
+        temp <- temp[complete.cases(temp),]
+        p1 <-  ggplot(data=temp, mapping = aes_string(x=xx,y=yy, color="Topic")) + 
+          geom_point() + xlab(xl) + ylab(yl) 
+        
+        plotlist[[n]] <<- p1
+    
+        temp <-  NULL
+  })
+do.call(grid.arrange, plotlist)
+```
+
+```{r}
+#from above figure:
+#1. facebook has the most outreach to people, than LinkedIn and than googlePlus.
+#2. people engage about obama more on facebook and googlePlus
+#3. People engage more about economy and microsoft on LinkedIn
+```
+
+
+#### relationship between sentimentHeadline and social media platform by topic
+```{r}
+nC <- c("Facebook","GooglePlus", "LinkedIn")
+y <- "SentimentHeadline"
+plotlist <- list()
+n=0
+for (j in nC)
+  local({ 
+        j <- j
+        n <- length(plotlist)+1
+        xx <- j
+        yy <- y 
+        xl <- j
+        yl <- y
+        temp <- dataset[,c(xx,yy,"Topic")]
+        temp <- temp[complete.cases(temp),]
+        p1 <-  ggplot(data=temp, mapping = aes_string(x=xx,y=yy, color="Topic")) + 
+          geom_point() + xlab(xl) + ylab(yl) 
+        
+        plotlist[[n]] <<- p1
+    
+        temp <-  NULL
+  })
+do.call(grid.arrange, plotlist)
+```
+
+
+
+```{r}
+#from above figure:
+#1. facebook has the most outreach to people, than LinkedIn and than googlePlus same trend as previous figure.
+#2. people engage about obama more on facebook and googlePlus
+#3. People engage more about economy and microsoft on LinkedIn
+```
+
+#### remove outliers in social media platforms
+```{r}
+mod <- lm(SentimentTitle~Facebook+GooglePlus+LinkedIn, data=dataset)
+cooksd <- cooks.distance(mod)
+```
+
+```{r}
+plot(cooksd, pch="*",cex=2,main="Influential Obs by Cooks distance")
+abline(h=4*mean(cooksd,na.rm = T), col="red")
+text(x=1:length(cooksd)+1, y=cooksd+0.002,labels = ifelse(cooksd>4*mean(cooksd,na.rm = T), names(cooksd),""),col = "red")
+```
+
+```{r}
+#removing outliers in Facebook
+dataset <- subset(dataset,Facebook <=25000)
+
+#removing outliers in GooglePlus
+dataset <- subset(dataset, GooglePlus <=875)
+
+#removing outliers in LinkedIn
+dataset <- subset(dataset, LinkedIn <=3000)
+```
+
+
+#### sentimentTitle
+```{r}
+range(dataset$SentimentTitle)
+ggplot(data=dataset,mapping = aes(x=SentimentTitle)) + geom_histogram(bins = 30,fill="lightblue")
+```
+
+#### sentimentHeadline
+```{r}
+range(dataset$SentimentHeadline)
+ggplot(data=dataset,mapping = aes(x=SentimentHeadline)) + geom_histogram(bins = 30,fill="lightblue")
+```
+
+#### Date
+```{r}
+dataset$year <- as.factor(lubridate::year(dataset$date))
+dataset$month <- as.factor(lubridate::month(dataset$date))
+
+testfinal$year <- as.factor(lubridate::year(testfinal$date))
+testfinal$month <- as.factor(lubridate::month(testfinal$date))
+
+ggplot(data=dataset,mapping = aes(x=year,fill=Topic)) + geom_histogram(stat = "count")
+ggplot(data=dataset,mapping = aes(x=month,fill=Topic)) + geom_histogram(stat = "count")
+```
+
+
